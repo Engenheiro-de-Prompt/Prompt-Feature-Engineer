@@ -1,0 +1,48 @@
+function GPTResponse(prompt, dynamicContent) {
+// Converte o prompt para string para garantir compatibilidade com o método replace
+prompt = String(prompt);
+
+// Adiciona o conteúdo dinâmico ao final do prompt
+prompt += dynamicContent;
+
+var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+// Substitui referências de célula entre colchetes duplos pelo conteúdo real da célula
+var regex = /\[\[(.*?)\]\]/g;
+prompt = prompt.replace(regex, function(match, p1) {
+var range = sheet.getRange(p1);
+return range.getValue();
+});
+
+var apiKey = "API";
+var apiUrl = "https://api.openai.com/v1/chat/completions";
+var payload = JSON.stringify({
+model: "gpt-3.5-turbo",
+messages: [{
+"role": "user",
+"content": prompt
+}]
+});
+
+var options = {
+"method": "post",
+"contentType": "application/json",
+"payload": payload,
+"headers": {
+"Authorization": "Bearer " + apiKey
+},
+"muteHttpExceptions": true
+};
+
+try {
+var response = UrlFetchApp.fetch(apiUrl, options);
+var json = JSON.parse(response.getContentText());
+if (json.choices && json.choices.length > 0) {
+return json.choices[0].message.content;
+}
+return "No response from GPT";
+} catch (error) {
+Logger.log("Error calling GPT API: " + error.toString());
+return "Error: " + error.toString();
+}
+} 
